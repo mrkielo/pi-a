@@ -63,7 +63,7 @@ unsigned long tempmicros;
 //decode
 float last;
 float lastEngineSpeed = 0;
-float difference = 10;
+float difference = 300;
 int loops = 0;
 float capilerMax = 327.68;
 
@@ -100,23 +100,15 @@ void STOP() {
 	isEngine = false;
 }
 
-void show()
-	Serial.print("target: ");
-	Serial.println(target);
-}
 
 
 float decode(float capilerInput) {
 
-	if(lSpeed>0) lastEngineSpeed = -1;
-	else if(rSpeed>0) lastEngineSpeed =1;
-	else if(rSpeed==0 && lSpeed==0) lastEngineSpeed = 0;
-
-	if(lastEngineSpeed>0 && capilerInput+difference<last) {
+	if(capilerInput+difference<last) {
 		loops++;
 	}
 
-	if(lastEngineSpeed<0 && capilerInput-difference>last) {
+	if(capilerInput-difference>last) {
 		loops--;
 	}
 
