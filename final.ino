@@ -3,8 +3,9 @@
 #include <Key.h>
 #include <Keypad.h>
 #include <LiquidCrystal.h>
-
-//pins definition
+////////
+//PINS//
+////////
 int clockpin = 3;
 int datapin = 2;
 
@@ -50,6 +51,8 @@ bool isEngine = false;
 
 
 
+
+
 //engine
 float time = millis();
 float lSpeed = 0;
@@ -69,7 +72,12 @@ float capilerMax = 327.68;
 
 //sterring
 float real;
-float target = 0;
+float target = -1;
+
+
+//menu
+int menu = 0;
+char operation = '=';
 
 //parameters
 float slowDownOffset = 50;
@@ -78,8 +86,10 @@ float highSpeed = 200;
 float hesitate = 1;
 float maxValue = 1311;
 
+////////////////
+//ENGINE FUNCS//
+////////////////
 
-//engine funcs
 void FWD() {
 	lSpeed = 0;
 	if(abs(target-real)<slowDownOffset) rSpeed = slowSpeed;
@@ -100,7 +110,21 @@ void STOP() {
 	isEngine = false;
 }
 
+void engine() {
+	if(digitalRead(stopButton)==LOW) target=-1; // STOPBUTTON
 
+	if(target<maxValue && target>=-1) {		// ENGINE DRIVER
+	if((real>=target-hesitate && real<target+hesitate) || target==-1) STOP();
+	else if(real<target-hesitate) FWD();
+	else if(real>target+hesitate) RWD();
+	}
+}
+
+
+
+/////////////////
+//CAPILER FUNCS//
+/////////////////
 
 float decode(float capilerInput) {
 
@@ -179,11 +203,25 @@ float capiler(int clockpin, int datapin) {
 
 
 
+////////////
+//IO FUNCS//
+////////////
+
 void keypadStandard() {
 	char key = customKeypad.getKey();
+
+	lcd.clear();
+	lcd.setCursor(0,0);
+	lcd.print("CEL: " + string);
+	lcd.setCursor(0,1);
+	lcd.print(real);
+	lcd.setCursor(15,1);
+	lcd.print(operation);
+
 	if(key && !isEngine) {
 
 		for(int i=0; i<10;i++) { //only numbers
+			
 			if(key==digitChars[i]) {
 				string+=digitChars[i];
 				break;
@@ -192,23 +230,88 @@ void keypadStandard() {
 		
 		if(key == 'B') { //DELETE
 			string.remove(string.length()-1,1);
-			lcd.clear();
 		}
 
-		if(key == 'A') { //START
+		else if(key == 'A') { //START
 			number = string.toFloat();
-			target = number;
+
+			switch(operation) {
+				case '=':
+					target=number;
+				break;
+				case '-':
+					target-=number;
+				break;
+				case '+':
+					target+=number;
+				break;
+			}
 		}
 
-		if(key == 'C') { //CLEAR
+		else if(key == 'C') { //CLEAR
 			string = "";
-			lcd.clear();
 		}
 
+		else if(key == 'D') { //next menu
+			menu++;
+		}
+		else if(key == '*') {
+			if(operation == '=') operation = '+';
+			else if(operation == '-') operation = '=';
+			else if(operation == '+') operation = '-';
+		}
 
 
 	}
+
 }
+
+float keypadSettings(float option, String title) {
+	char key = customKeypad.getKey();
+
+	String value = String(option);
+	lcd.clear();
+	lcd.setCursor(0,0);
+	lcd.print(title);
+	lcd.setCursor(0,1);
+	lcd.print(value);
+
+	if(key && !isEngine) {
+
+		for(int i=0; i<10;i++) { //only numbers
+			
+			if(key==digitChars[i]) {
+				value+=digitChars[i];
+				break;
+			}
+		}
+		
+		if(key == 'B') { //DELETE
+			value.remove(value.length()-1,1);
+		}
+
+		else if(key == 'C') { //CLEAR
+			value = "";
+		}
+
+		else if(key == 'D' || key== 'A') { //next menu
+			menu++;
+		}
+	
+	}
+	
+	if(value=="") value="0"; //anti-null protection
+
+	return value.toFloat();
+}
+
+
+
+
+//////////////
+//MAIN FUNCS//
+//////////////
+
 
 void setup() {
 	pinMode(lcdLED,OUTPUT);
@@ -248,27 +351,29 @@ void loop() {
 	real = decode(capiler(clockpin,datapin)); //capiler read
 
 
-	keypadStandard(); //keypad handler
+	switch(menu) {
+		case 0:
+			keypadStandard();
+		break;
+		case 1:
+			hesitate=keypadSettings(hesitate,"Dokladnosc:");
+		break;
+		case 2:
+			slowSpeed = keypadSettings(slowSpeed,"pred. niska:");
+		break;
+		case 3:
+			highSpeed = keypadSettings(highSpeed,"predk. wysoka:");
+		break;
+		case 4:
+			slowDownOffset = keypadSettings(slowDownOffset,"odl zwalniania:");
+		break;
+		case 5:
+			maxValue = keypadSettings(maxValue,"max wartosc:");
+		break;
+		case 6:
+			menu = 0;
+		break;
 
-  
-	lcd.clear();
-	lcd.setCursor(0,0);
-	lcd.print(string);
-	lcd.setCursor(0,2);
-	lcd.print(real);
-
-	if(digitalRead(stopButton)==LOW) target=-1; // STOPBUTTON
-
-
-
-	
-	if(target<maxValue && target>=-1) {		// ENGINE DRIVER
-		if((real>=target-hesitate && real<target+hesitate) || target==-1) STOP();
-		else if(real<target-hesitate) FWD();
-		else if(real>target+hesitate) RWD();
 	}
-
-
-
-
+	engine();
 }
