@@ -266,17 +266,20 @@ void keypadStandard() {
 
 }
 
-float keypadSettings(float option, String title) {
+void keypadSettings(float &option, String title) {
 	char key = customKeypad.getKey();
 
-	String value = String(option);
-	lcd.clear();
-	lcd.setCursor(0,0);
-	lcd.print(title);
-	lcd.setCursor(0,1);
-	lcd.print(value);
+	
 
 	if(key && !isEngine) {
+
+		String value = String(option);
+		lcd.clear();
+		lcd.setCursor(0,0);
+		lcd.print(title);
+		lcd.setCursor(0,1);
+		lcd.print(value);
+
 
 		for(int i=0; i<10;i++) { //only numbers
 			
@@ -295,14 +298,16 @@ float keypadSettings(float option, String title) {
 		}
 
 		else if(key == 'D' || key== 'A') { //next menu
+			option = value.toFloat();
 			menu++;
+
 		}
 	
 	}
 	
 	if(value=="") value="0"; //anti-null protection
+	
 
-	return value.toFloat();
 }
 
 
@@ -356,19 +361,19 @@ void loop() {
 			keypadStandard();
 		break;
 		case 1:
-			hesitate=keypadSettings(hesitate,"Dokladnosc:");
+			keypadSettings(hesitate,"Dokladnosc:");
 		break;
 		case 2:
-			slowSpeed = keypadSettings(slowSpeed,"pred. niska:");
+			keypadSettings(slowSpeed,"pred. niska:");
 		break;
 		case 3:
-			highSpeed = keypadSettings(highSpeed,"predk. wysoka:");
+			keypadSettings(highSpeed,"predk. wysoka:");
 		break;
 		case 4:
-			slowDownOffset = keypadSettings(slowDownOffset,"odl zwalniania:");
+			keypadSettings(slowDownOffset,"odl zwalniania:");
 		break;
 		case 5:
-			maxValue = keypadSettings(maxValue,"max wartosc:");
+			keypadSettings(maxValue,"max wartosc:");
 		break;
 		case 6:
 			menu = 0;
