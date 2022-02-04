@@ -3,6 +3,14 @@
 #include <Key.h>
 #include <Keypad.h>
 #include <LiquidCrystal.h>
+
+#include<SPI.h>
+#include<SD.h>
+
+
+
+
+
 ////////
 //PINS//
 ////////
@@ -48,7 +56,11 @@ char digitChars[] = {'0','1','2','3','4','5','6','7','8','9','.'};
 float number;
 String string;
 bool isEngine = false;
+char key;
 
+
+//SD
+File file;
 
 
 
@@ -85,6 +97,78 @@ float slowSpeed = 25;
 float highSpeed = 200;
 float hesitate = 1;
 float maxValue = 1311;
+
+//parameters strings
+
+String slowDownOffsetString = "";
+String slowSpeedString = "";
+String highSpeedString = "";
+String hesitateString = "";
+String maxValueString = "";
+
+
+
+
+void load() {
+	
+	file = SD.open("slowDownOffset.txt");
+	slowDownOffset = file.read();
+	file.close();
+	
+	file = SD.open("slowSpeed.txt");
+	slowSpeed = file.read();
+	file.close();
+
+	file = SD.open("highSpeed.txt");
+	highSpeed = file.read();
+	file.close();
+
+	file = SD.open("hesitate.txt");
+	hesitate = file.read();
+	file.close();
+
+	file = SD.open("maxValue.txt");
+	maxValue = file.read();
+	file.close();
+}
+
+void save() {
+	SD.remove("slowDownOffset.txt");
+	file = SD.open("slowDownOffset.txt");
+	file.print(slowDownOffset);
+	file.close();
+
+	SD.remove("slowSpeed.txt");
+	file = SD.open("slowSpeed.txt");
+	file.print(slowSpeed);
+	file.close();
+
+	SD.remove("highSpeed.txt");
+	file = SD.open("highSpeed.txt");
+	file.print(highSpeed);
+	file.close();
+
+	SD.remove("hesitate.txt");
+	file = SD.open("hesitate.txt");
+	file.print(hesitate);
+	file.close();
+
+	SD.remove("maxValue.txt");
+	file = SD.open("maxValue.txt");
+	file.print(maxValue);
+	file.close();
+}
+
+
+
+
+
+
+
+
+
+
+
 
 ////////////////
 //ENGINE FUNCS//
@@ -208,7 +292,7 @@ float capiler(int clockpin, int datapin) {
 ////////////
 
 void keypadStandard() {
-	char key = customKeypad.getKey();
+	key = customKeypad.getKey();
 
 	lcd.clear();
 	lcd.setCursor(0,0);
@@ -266,48 +350,40 @@ void keypadStandard() {
 
 }
 
-void keypadSettings(float &option, String title) {
-	char key = customKeypad.getKey();
+void keypadSettings(float  &option,String &string, String title) {
 
-	
+	key = customKeypad.getKey();
 
-	if(key && !isEngine) {
-
-		String value = String(option);
 		lcd.clear();
 		lcd.setCursor(0,0);
 		lcd.print(title);
 		lcd.setCursor(0,1);
-		lcd.print(value);
+		lcd.print(string);
 
-
+	if(key && !isEngine) {
 		for(int i=0; i<10;i++) { //only numbers
 			
 			if(key==digitChars[i]) {
-				value+=digitChars[i];
+				string+=digitChars[i];
 				break;
 			}
 		}
 		
 		if(key == 'B') { //DELETE
-			value.remove(value.length()-1,1);
+			string.remove(string.length()-1,1);
 		}
 
 		else if(key == 'C') { //CLEAR
-			value = "";
+			string = "";
 		}
 
 		else if(key == 'D' || key== 'A') { //next menu
-			option = value.toFloat();
+			if(string=="") string="0"; //anti-null protection
+			option = string.toFloat();
 			menu++;
-
 		}
 	
 	}
-	
-	if(value=="") value="0"; //anti-null protection
-	
-
 }
 
 
@@ -319,6 +395,7 @@ void keypadSettings(float &option, String title) {
 
 
 void setup() {
+	SD.begin(53);
 	pinMode(lcdLED,OUTPUT);
 	lcd.begin(16,2);
 
@@ -336,8 +413,7 @@ void setup() {
 	pinMode(L_EN,OUTPUT);
 	pinMode(RPWM,OUTPUT);
 	pinMode(LPWM,OUTPUT);
-	
-	
+	load();
 	pinMode(stopButton, INPUT_PULLUP);
 
 	digitalWrite(L_IS,LOW);
@@ -345,6 +421,10 @@ void setup() {
 	digitalWrite(R_EN,HIGH);
 	digitalWrite(L_EN,HIGH);
 	loops = 0;
+
+
+
+
 }
 
 void loop() {	
@@ -361,21 +441,22 @@ void loop() {
 			keypadStandard();
 		break;
 		case 1:
-			keypadSettings(hesitate,"Dokladnosc:");
+			keypadSettings(hesitate,hesitateString,"Dokladnosc:");
 		break;
 		case 2:
-			keypadSettings(slowSpeed,"pred. niska:");
+			keypadSettings(slowSpeed,slowSpeedString,"pred. niska:");
 		break;
 		case 3:
-			keypadSettings(highSpeed,"predk. wysoka:");
+			keypadSettings(highSpeed,highSpeedString,"predk. wysoka:");
 		break;
 		case 4:
-			keypadSettings(slowDownOffset,"odl zwalniania:");
+			keypadSettings(slowDownOffset,slowDownOffsetString,"odl zwalniania:");
 		break;
 		case 5:
-			keypadSettings(maxValue,"max wartosc:");
+			keypadSettings(maxValue,maxValueString,"max wartosc:");
 		break;
 		case 6:
+			save();
 			menu = 0;
 		break;
 
